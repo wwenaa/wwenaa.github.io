@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>旧围瓦煲鸡 - 高德地图</title>
+    <!-- 微信分享卡片优化 -->
+    <meta property="og:title" content="旧围瓦煲鸡 · 东莞地道瓦煲鸡" />
+    <meta property="og:description" content="4.3分  人均68元  营业至凌晨2点" />
+    <meta property="og:image" content="https://picsum.photos/300/200?random=1" /> <!-- 可替换为真实餐厅图 -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* 仿高德头部 */
+        .amap-header {
+            background-color: #009688;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .amap-header .back {
+            font-size: 24px;
+            cursor: default;
+        }
+        .amap-header .title {
+            flex: 1;
+            text-align: center;
+            font-size: 17px;
+        }
+        .amap-header .share {
+            font-size: 20px;
+            cursor: default;
+        }
+
+        /* 地图容器 */
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            background-color: #e0e2e5;
+            overflow: hidden;
+        }
+        /* 模拟高德地图样式（带标记和路网） */
+        .mock-map {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #cbd2d9 0%, #b0b7be 100%);
+            position: relative;
+        }
+        /* 道路网格 */
+        .mock-map::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,240,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,240,0.3) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+        }
+        /* 模拟绿地 */
+        .mock-map::after {
+            content: "";
+            position: absolute;
+            bottom: 20%;
+            left: 10%;
+            width: 25%;
+            height: 20%;
+            background: rgba(76,175,80,0.4);
+            border-radius: 50%;
+            filter: blur(8px);
+            pointer-events: none;
+        }
+        /* 红色标记点 */
+        .map-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -100%);
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 24px solid #ff5252;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+            z-index: 2;
+        }
+        .map-marker::after {
+            content: "";
+            position: absolute;
+            top: 20px;
+            left: -6px;
+            width: 12px;
+            height: 12px;
+            background: #ff5252;
+            border-radius: 50%;
+        }
+        /* 地图控件模拟 */
+        .map-controls {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #666;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            pointer-events: none;
+        }
+        .zoom-buttons {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
+        .zoom-buttons div {
+            width: 32px;
+            height: 32px;
+            text-align: center;
+            line-height: 32px;
+            font-size: 20px;
+            border-bottom: 1px solid #eee;
+            cursor: default;
+        }
+        .zoom-buttons div:last-child {
+            border-bottom: none;
+        }
+
+        /* 信息卡片 */
+        .info-card {
+            background: white;
+            margin: 12px;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .shop-name {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .shop-name span:first-child {
+            flex: 1;
+        }
+        .shop-stars {
+            color: #ff9800;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .star-value {
+            font-weight: bold;
+            color: #333;
+            margin-left: 4px;
+        }
+        .shop-address {
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin: 12px 0;
+            line-height: 1.4;
+        }
+        .shop-address .addr-icon {
+            font-size: 16px;
+            min-width: 20px;
+        }
+        /* 周边地标标签样式 */
+        .nearby {
+            background: #f8f8f8;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        .nearby-title {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .nearby-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .nearby-tags .tag {
+            background: white;
+            border: 1px solid #e0e0e0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+            transition: background 0.2s;
+        }
+        .nearby-tags .tag:hover {
+            background: #f0f0f0;
+        }
+        .shop-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .tag {
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .navigate-btn {
+            background-color: #009688;
+            color: white;
+            text-align: center;
+            padding: 14px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .navigate-btn:active {
+            background-color: #00796b;
+            transform: scale(0.98);
+        }
+
+        /* 整蛊弹窗 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .joke-card {
+            background: white;
+            padding: 32px 24px;
+            border-radius: 32px;
+            text-align: center;
+            max-width: 80%;
+            animation: bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .joke-card h1 {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+        .joke-card p {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            color: #ff5252;
+        }
+        .joke-card button {
+            background: #ff5252;
+            border: none;
+            color: white;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .joke-card button:active {
+            transform: scale(0.96);
+        }
+        @keyframes bounce {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 底部提示 */
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: #aaa;
+            margin: 20px 0 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 仿高德头部 -->
+    <div class="amap-header">
+        <div class="back">←</div>
+        <div class="title">旧围瓦煲鸡</div>
+        <div class="share">⋯</div>
+    </div>
+
+    <!-- 地图区域（模拟） -->
+    <div class="map-container">
+        <div class="mock-map">
+            <div class="map-marker"></div>
+            <!-- 模拟缩放控件 -->
+            <div class="zoom-buttons">
+                <div>+</div>
+                <div>-</div>
+            </div>
+            <div class="map-controls">© 高德地图</div>
+        </div>
+    </div>
+
+    <!-- 信息卡片 -->
+    <div class="info-card">
+        <div class="shop-name">
+            <span>旧围瓦煲鸡</span>
+            <span style="font-size:14px; color:#999;">瓦煲鸡·粤菜</span>
+        </div>
+        <div class="shop-stars">
+            ★★★★☆ <span class="star-value">4.3分</span>
+            <span style="color:#999; margin-left:8px;">| 1335条评价</span>
+        </div>
+        <div class="shop-address">
+            <div class="addr-icon">📍</div>
+            <div>广东省东莞市清溪镇厦埔旧围村巷3号</div>
+        </div>
+        
+        <!-- 周边地标标签（新样式） -->
+        <div class="nearby">
+            <div class="nearby-title">🏙️ 周边地标</div>
+            <div class="nearby-tags">
+                <span class="tag">🏬 鹿湖商业中心</span>
+                <span class="tag">🏢 飞鹏大厦</span>
+                <span class="tag">🏞️ 清溪公园</span>
+                <span class="tag">🏛️ 镇政府</span>
+            </div>
+        </div>
+
+        <div class="shop-tags">
+            <span class="tag">🔥 人气火爆</span>
+            <span class="tag">🕙 10:00-02:00</span>
+            <span class="tag">💰 人均68元</span>
+            <span class="tag">📸 网红打卡</span>
+            <span class="tag">🚗 停车方便</span>
+        </div>
+        <div class="navigate-btn" id="fakeNav">🚗 导航</div>
+    </div>
+    <div class="footer-note">数据来自高德地图 · 仅供参考</div>
+
+    <!-- 愚人节弹窗 -->
+    <div id="jokeOverlay" class="overlay">
+        <div class="joke-card">
+            <h1>🎉</h1>
+            <p>愚人节快乐！</p>
+            <button onclick="closeJoke()">哈哈哈，上当啦</button>
+        </div>
+    </div>
+
+    <script>
+        // 点击导航按钮触发整蛊弹窗
+        const navBtn = document.getElementById('fakeNav');
+        const overlay = document.getElementById('jokeOverlay');
+        
+        navBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            overlay.classList.add('active');
+        });
+
+        // 关闭弹窗函数（全局）
+        window.closeJoke = function() {
+            overlay.classList.remove('active');
+        };
+
+        // 可选：点击遮罩层也关闭
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                closeJoke();
+            }
+        });
+    </script>
+</body>
+</html>
